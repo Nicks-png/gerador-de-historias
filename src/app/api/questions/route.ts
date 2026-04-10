@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { anthropic } from '@/lib/anthropic';
+import { genAI, MODEL } from '@/lib/gemini';
 import { QUESTIONS_SYSTEM_PROMPT } from '@/lib/prompts';
 import { Question } from '@/lib/types';
 
@@ -11,27 +11,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Resumo inválido' }, { status: 400 });
     }
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: QUESTIONS_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Gere as perguntas para esta aventura de RPG:\n\n"${summary.trim()}"`,
-        },
-      ],
+    const model = genAI.getGenerativeModel({
+      model: MODEL,
+      systemInstruction: QUESTIONS_SYSTEM_PROMPT,
     });
 
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Resposta inesperada da IA' }, { status: 500 });
-    }
+    const result = await model.generateContent(
+      `Gere as perguntas para esta aventura de RPG:\n\n"${summary.trim()}"`
+    );
+
+    const text = result.response.text();
 
     let parsed: { questions: Question[] };
     try {
-      const jsonText = content.text.trim();
-      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('JSON não encontrado');
       parsed = JSON.parse(jsonMatch[0]);
     } catch {
@@ -50,7 +43,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ questions });
   } catch (error) {
-    console.error('Erro em /api/questions:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Erro em /api/questions:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
