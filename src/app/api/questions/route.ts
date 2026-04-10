@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { genAI, MODEL } from '@/lib/gemini';
+import { groq, MODEL } from '@/lib/groq';
 import { QUESTIONS_SYSTEM_PROMPT } from '@/lib/prompts';
 import { Question } from '@/lib/types';
 
@@ -11,16 +11,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Resumo inválido' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({
+    const completion = await groq.chat.completions.create({
       model: MODEL,
-      systemInstruction: QUESTIONS_SYSTEM_PROMPT,
+      max_tokens: 1024,
+      messages: [
+        { role: 'system', content: QUESTIONS_SYSTEM_PROMPT },
+        { role: 'user', content: `Gere as perguntas para esta aventura de RPG:\n\n"${summary.trim()}"` },
+      ],
     });
 
-    const result = await model.generateContent(
-      `Gere as perguntas para esta aventura de RPG:\n\n"${summary.trim()}"`
-    );
-
-    const text = result.response.text();
+    const text = completion.choices[0]?.message?.content ?? '';
 
     let parsed: { questions: Question[] };
     try {

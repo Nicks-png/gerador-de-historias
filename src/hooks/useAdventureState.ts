@@ -74,7 +74,8 @@ export function useAdventureState() {
         });
 
         if (!response.ok) {
-          throw new Error('Erro ao gerar aventura');
+          const errText = await response.text();
+          throw new Error(errText || 'Erro ao gerar aventura');
         }
 
         const reader = response.body!.getReader();

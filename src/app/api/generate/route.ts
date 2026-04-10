@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
-import { genAI, MODEL } from '@/lib/gemini';
+import { groq, MODEL } from '@/lib/groq';
 import { ADVENTURE_SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts';
 import { Question } from '@/lib/types';
+
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,31 +14,39 @@ export async function POST(request: NextRequest) {
       return new Response('Dados inválidos', { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({
+    const stream = await groq.chat.completions.create({
       model: MODEL,
-      systemInstruction: ADVENTURE_SYSTEM_PROMPT,
+      max_tokens: 8192,
+      temperature: 0.9,
+      stream: true,
+      messages: [
+        { role: 'system', content: ADVENTURE_SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(summary, questions) },
+      ],
     });
 
-    const result = await model.generateContentStream(
-      buildUserPrompt(summary, questions)
-    );
-
+    const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const chunk of result.stream) {
-          const text = chunk.text();
-          if (text) {
-            controller.enqueue(new TextEncoder().encode(text));
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content ?? '';
+            if (text) {
+              controller.enqueue(encoder.encode(text));
+            }
           }
+          controller.close();
+        } catch (err) {
+          controller.error(err);
         }
-        controller.close();
       },
     });
 
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
       },
     });
   } catch (error) {

@@ -6,4 +6,4 @@ if (!process.env.GOOGLE_AI_API_KEY) {
 
 export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
-export const MODEL = 'gemini-2.0-flash';
+export const MODEL = 'gemini-2.0-flash-lite';
