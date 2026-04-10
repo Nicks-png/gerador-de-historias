@@ -29,7 +29,7 @@ export default function Home() {
   const adventureIsDone = !state.isLoading && state.adventure.length > 0;
 
   return (
-    <div className="min-h-screen bg-stone-900 flex flex-col">
+    <div className="h-screen bg-stone-900 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 border-b border-stone-800 bg-stone-950 z-10">
         <div className="h-14 px-5 flex items-center justify-between">
@@ -53,94 +53,92 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Body */}
-      {isPhase3 ? (
-        /* Layout fase 3: sidebar + content + chatbar */
-        <div className="flex flex-1 overflow-hidden h-[calc(100vh-56px)]">
-          <Sidebar
-            conversations={conversations}
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen((o) => !o)}
-            onLoad={loadConversation}
-            onDelete={remove}
-            onNewAdventure={startNewConversation}
-            currentConversationId={state.conversationId}
-          />
+      {/* Body: sidebar sempre visível + conteúdo principal */}
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
+          conversations={conversations}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen((o) => !o)}
+          onLoad={loadConversation}
+          onDelete={remove}
+          onNewAdventure={startNewConversation}
+          currentConversationId={state.conversationId}
+        />
 
-          {/* Main: adventure scroll + chatbar fixo na base */}
-          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-6 py-8">
-              <ProgressBar currentPhase={state.phase} />
-              <PhaseThree
-                adventure={state.adventure}
-                isLoading={state.isLoading}
-                error={state.error}
-                onNewAdventure={startNewConversation}
-                onAdjust={retryFromPhase2}
-              />
-            </div>
-            <ChatBar
-              messages={state.chatMessages}
-              isLoading={state.isLoading}
-              isAdventureReady={adventureIsDone}
-              onSend={sendChatMessage}
-            />
-          </div>
-        </div>
-      ) : (
-        /* Layout fases 0, 1 e 2: centralizado */
-        <main className="flex-1 flex flex-col items-center w-full overflow-y-auto">
-          {state.phase === 0 && (
-            <PhaseZero
-              conversations={conversations}
-              onNew={startNewConversation}
-              onLoad={loadConversation}
-              onDelete={remove}
-            />
-          )}
-
-          {state.phase === 1 && (
-            <div className="w-full max-w-5xl px-6 py-12">
-              <div className="text-center mb-12">
-                <h1 className="text-5xl font-bold text-stone-100 tracking-tight mb-4">
-                  Gere aventuras de{' '}
-                  <span className="text-amber-400">RPG de mesa</span>
-                </h1>
-                <p className="text-stone-400 text-base max-w-lg mx-auto leading-relaxed">
-                  Descreva sua ideia, responda algumas perguntas e receba uma aventura completa — pronta para jogar.
-                </p>
+        {/* Conteúdo principal */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          {isPhase3 ? (
+            <>
+              <div className="flex-1 overflow-y-auto px-6 py-8">
+                <ProgressBar currentPhase={state.phase} />
+                <PhaseThree
+                  adventure={state.adventure}
+                  isLoading={state.isLoading}
+                  error={state.error}
+                  onNewAdventure={startNewConversation}
+                  onAdjust={retryFromPhase2}
+                />
               </div>
-              <ProgressBar currentPhase={state.phase} />
-              <PhaseOne
-                onSubmit={submitSummary}
+              <ChatBar
+                messages={state.chatMessages}
                 isLoading={state.isLoading}
-                error={state.error}
+                isAdventureReady={adventureIsDone}
+                onSend={sendChatMessage}
               />
-            </div>
-          )}
+            </>
+          ) : (
+            <main className="flex-1 flex flex-col items-center overflow-y-auto">
+              {state.phase === 0 && (
+                <PhaseZero
+                  conversations={conversations}
+                  onNew={startNewConversation}
+                  onLoad={loadConversation}
+                  onDelete={remove}
+                />
+              )}
 
-          {state.phase === 2 && (
-            <div className="w-full max-w-5xl px-6 py-12">
-              <ProgressBar currentPhase={state.phase} />
-              <PhaseTwo
-                questions={state.questions}
-                summary={state.summary}
-                onSubmit={submitAnswers}
-                onBack={resetAdventure}
-                isLoading={state.isLoading}
-                error={state.error}
-              />
-            </div>
-          )}
-        </main>
-      )}
+              {state.phase === 1 && (
+                <div className="w-full max-w-5xl px-6 py-12">
+                  <div className="text-center mb-12">
+                    <h1 className="text-5xl font-bold text-stone-100 tracking-tight mb-4">
+                      Gere aventuras de{' '}
+                      <span className="text-amber-400">RPG de mesa</span>
+                    </h1>
+                    <p className="text-stone-400 text-base max-w-lg mx-auto leading-relaxed">
+                      Descreva sua ideia, responda algumas perguntas e receba uma aventura completa — pronta para jogar.
+                    </p>
+                  </div>
+                  <ProgressBar currentPhase={state.phase} />
+                  <PhaseOne
+                    onSubmit={submitSummary}
+                    isLoading={state.isLoading}
+                    error={state.error}
+                  />
+                </div>
+              )}
 
-      {/* Background gradient (fases 0, 1 e 2) */}
-      {!isPhase3 && (
-        <div className="fixed inset-0 pointer-events-none -z-10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(245,158,11,0.07),transparent)]" />
+              {state.phase === 2 && (
+                <div className="w-full max-w-5xl px-6 py-12">
+                  <ProgressBar currentPhase={state.phase} />
+                  <PhaseTwo
+                    questions={state.questions}
+                    summary={state.summary}
+                    onSubmit={submitAnswers}
+                    onBack={resetAdventure}
+                    isLoading={state.isLoading}
+                    error={state.error}
+                  />
+                </div>
+              )}
+
+              {/* Background gradient */}
+              <div className="fixed inset-0 pointer-events-none -z-10">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(245,158,11,0.07),transparent)]" />
+              </div>
+            </main>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
