@@ -49,7 +49,7 @@ export function useAdventureState(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save when loading finishes (phase 2 questions ready OR phase 3 streaming/chat done)
+  // Auto-save when loading finishes
   useEffect(() => {
     if (!state.isLoading && state.conversationId && state.phase >= 2) {
       persistState(state);
@@ -190,8 +190,10 @@ export function useAdventureState(
         let buffer = '';
         let adventureStarted = false;
         let confirmationMsg = '';
+        let newAdventure = '';
 
-        // Não limpar adventure nem alterar isLoading até encontrar o separador
+        // Acumula toda a nova aventura num buffer separado.
+        // A aventura atual (previousAdventure) permanece visível até o stream terminar.
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -201,23 +203,20 @@ export function useAdventureState(
             const sepIdx = buffer.indexOf(SEPARATOR);
             if (sepIdx !== -1) {
               confirmationMsg = buffer.slice(0, sepIdx).trim();
-              const afterSep = buffer.slice(sepIdx + SEPARATOR.length);
+              newAdventure = buffer.slice(sepIdx + SEPARATOR.length);
               adventureStarted = true;
-              // Só agora substituímos a aventura
-              setState((prev) => ({ ...prev, adventure: afterSep }));
               buffer = '';
             }
           } else {
-            setState((prev) => ({ ...prev, adventure: prev.adventure + buffer }));
+            newAdventure += buffer;
             buffer = '';
           }
         }
 
-        if (adventureStarted && buffer) {
-          setState((prev) => ({ ...prev, adventure: prev.adventure + buffer }));
-        }
+        // Flush de qualquer resto
+        if (buffer) newAdventure += buffer;
 
-        // Separador nunca encontrado: restaura aventura anterior
+        // Separador nunca encontrado — restaura aventura e avisa
         if (!adventureStarted) {
           setState((prev) => ({
             ...prev,
@@ -235,9 +234,11 @@ export function useAdventureState(
           return;
         }
 
+        // Stream completo: substitui aventura e adiciona confirmação de uma vez
         setState((prev) => ({
           ...prev,
           isLoading: false,
+          adventure: newAdventure.trim() || previousAdventure,
           chatMessages: [
             ...prev.chatMessages,
             {
