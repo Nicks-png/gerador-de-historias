@@ -1,4 +1,4 @@
-import { Question } from './types';
+import { Question, ChatMessage } from './types';
 
 export const QUESTIONS_SYSTEM_PROMPT = `Você é um mestre de RPG experiente com conhecimento profundo de múltiplos sistemas de RPG de mesa (D&D 5e, Pathfinder 2e, Tormenta20, Call of Cthulhu, Vampiro a Máscara, Fate, GURPS, OSR e sistemas genéricos).
 
@@ -81,18 +81,32 @@ REGRAS DE QUALIDADE:
 - Varie os tipos de encontros entre combate, exploração e interação social
 - A aventura deve ser completamente jogável sem preparação adicional do Mestre`;
 
-export const EDIT_SYSTEM_PROMPT = `Você é um mestre de RPG e editor criativo. Você receberá uma aventura completa em Markdown e uma solicitação de edição do usuário.
+export const EDIT_SYSTEM_PROMPT = `Você é um mestre de RPG e editor criativo. Você receberá uma aventura completa em Markdown e uma solicitação de alteração do usuário via chat.
 
-Sua tarefa é retornar a aventura COMPLETA e ATUALIZADA em Markdown, aplicando as alterações solicitadas.
+Sua resposta DEVE seguir EXATAMENTE este formato — sem desvios:
+
+1. Uma frase curta confirmando o que foi alterado (ex: "✓ Adicionei o NPC Lyra como antagonista na Sessão 2.")
+2. A linha exata (sem espaços antes ou depois): ---ADVENTURE---
+3. A aventura completa e atualizada em Markdown
 
 REGRAS:
 - Mantenha toda a estrutura e conteúdo original que NÃO foi pedido para alterar
 - Aplique as mudanças de forma coerente com o tom e contexto da aventura
-- Se o usuário pedir para adicionar algo (NPC, cena, sessão), integre naturalmente ao conteúdo existente
-- Retorne SOMENTE a aventura em Markdown, sem comentários ou explicações sobre o que foi alterado`;
+- A confirmação deve ser concisa (1 frase), descrevendo especificamente o que mudou
+- A aventura após o separador deve estar completa, não truncada`;
 
-export function buildEditPrompt(adventure: string, editRequest: string): string {
-  return `Aqui está a aventura atual:\n\n${adventure}\n\n---\n\nSolicitação de edição:\n"${editRequest}"\n\nRetorne a aventura completa com as alterações aplicadas.`;
+export function buildEditPrompt(
+  adventure: string,
+  editRequest: string,
+  chatHistory?: ChatMessage[]
+): string {
+  const historyBlock = chatHistory?.length
+    ? `\nHistórico de edições desta sessão:\n${chatHistory
+        .map((m) => `${m.role === 'user' ? 'Você' : 'Mestre'}: ${m.content}`)
+        .join('\n')}\n`
+    : '';
+
+  return `Aqui está a aventura atual:\n\n${adventure}${historyBlock}\n\n---\n\nSolicitação: "${editRequest}"\n\nResponda no formato especificado.`;
 }
 
 export function buildUserPrompt(summary: string, questions: Question[]): string {

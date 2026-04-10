@@ -1,12 +1,17 @@
 import { NextRequest } from 'next/server';
 import { groq, MODEL } from '@/lib/groq';
 import { EDIT_SYSTEM_PROMPT, buildEditPrompt } from '@/lib/prompts';
+import { ChatMessage } from '@/lib/types';
 
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
-    const { adventure, editRequest }: { adventure: string; editRequest: string } =
+    const {
+      adventure,
+      editRequest,
+      chatHistory,
+    }: { adventure: string; editRequest: string; chatHistory?: ChatMessage[] } =
       await request.json();
 
     if (!adventure || !editRequest?.trim()) {
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
       stream: true,
       messages: [
         { role: 'system', content: EDIT_SYSTEM_PROMPT },
-        { role: 'user', content: buildEditPrompt(adventure, editRequest.trim()) },
+        { role: 'user', content: buildEditPrompt(adventure, editRequest.trim(), chatHistory) },
       ],
     });
 
