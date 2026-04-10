@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import { groq, MODEL_PRIMARY, MODEL_FALLBACK, MAX_TOKENS_FALLBACK, isRateLimit } from '@/lib/groq';
+import { NextRequest, NextResponse } from 'next/server';
+import { createChatCompletion } from '@/lib/groq';
 import { EDIT_SYSTEM_PROMPT, buildEditPrompt } from '@/lib/prompts';
 import { ChatMessage } from '@/lib/types';
 
@@ -15,57 +15,34 @@ export async function POST(request: NextRequest) {
       await request.json();
 
     if (!adventure || !editRequest?.trim()) {
-      return new Response('Dados inválidos', { status: 400 });
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    const params = {
+    const completion = await createChatCompletion({
       max_tokens: 5000,
       temperature: 0.7,
-      stream: true as const,
       messages: [
-        { role: 'system' as const, content: EDIT_SYSTEM_PROMPT },
-        { role: 'user' as const, content: buildEditPrompt(adventure, editRequest.trim(), chatHistory) },
+        { role: 'system', content: EDIT_SYSTEM_PROMPT },
+        { role: 'user', content: buildEditPrompt(adventure, editRequest.trim(), chatHistory) },
       ],
-    };
+    });
 
-    let stream;
-    try {
-      stream = await groq.chat.completions.create({ ...params, model: MODEL_PRIMARY });
-    } catch (err) {
-      if (isRateLimit(err)) {
-        stream = await groq.chat.completions.create({
-          ...params,
-          model: MODEL_FALLBACK,
-          max_tokens: MAX_TOKENS_FALLBACK,
-        });
-      } else throw err;
+    const raw = completion.choices[0]?.message?.content ?? '';
+
+    // Extrai confirmação e aventura pelo separador
+    const sepIdx = raw.indexOf('---ADVENTURE---');
+    if (sepIdx === -1) {
+      // Sem separador: trata o conteúdo inteiro como aventura atualizada
+      return NextResponse.json({ confirmation: '✓ Aventura atualizada.', adventure: raw.trim() });
     }
 
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const text = chunk.choices[0]?.delta?.content ?? '';
-            if (text) controller.enqueue(encoder.encode(text));
-          }
-          controller.close();
-        } catch (err) {
-          controller.error(err);
-        }
-      },
-    });
+    const confirmation = raw.slice(0, sepIdx).trim();
+    const updatedAdventure = raw.slice(sepIdx + '---ADVENTURE---'.length).trim();
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
-      },
-    });
+    return NextResponse.json({ confirmation: confirmation || '✓ Aventura atualizada.', adventure: updatedAdventure });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Erro em /api/edit:', msg);
-    return new Response(msg, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

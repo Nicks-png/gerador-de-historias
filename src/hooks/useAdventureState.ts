@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { AdventureState, Conversation, Question, ChatMessage } from '@/lib/types';
 import { extractTitle } from '@/hooks/useHistory';
 
-const SEPARATOR = '---ADVENTURE---';
 const STORAGE_KEY = 'rpg-conversations';
 const ACTIVE_ID_KEY = 'rpg-active-conversation';
 
@@ -183,68 +182,23 @@ export function useAdventureState(
           signal: abortController.signal,
         });
 
-        if (!response.ok) throw new Error(await response.text());
-
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let adventureStarted = false;
-        let confirmationMsg = '';
-        let newAdventure = '';
-
-        // Acumula toda a nova aventura num buffer separado.
-        // A aventura atual (previousAdventure) permanece visível até o stream terminar.
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          if (!adventureStarted) {
-            const sepIdx = buffer.indexOf(SEPARATOR);
-            if (sepIdx !== -1) {
-              confirmationMsg = buffer.slice(0, sepIdx).trim();
-              newAdventure = buffer.slice(sepIdx + SEPARATOR.length);
-              adventureStarted = true;
-              buffer = '';
-            }
-          } else {
-            newAdventure += buffer;
-            buffer = '';
-          }
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Erro ao processar alteração');
         }
 
-        // Flush de qualquer resto
-        if (buffer) newAdventure += buffer;
+        const { confirmation, adventure: newAdventure } = await response.json();
 
-        // Separador nunca encontrado — restaura aventura e avisa
-        if (!adventureStarted) {
-          setState((prev) => ({
-            ...prev,
-            isLoading: false,
-            adventure: previousAdventure,
-            chatMessages: [
-              ...prev.chatMessages,
-              {
-                id: crypto.randomUUID(),
-                role: 'assistant',
-                content: '⚠ Não foi possível processar a alteração. Tente novamente.',
-              },
-            ],
-          }));
-          return;
-        }
-
-        // Stream completo: substitui aventura e adiciona confirmação de uma vez
         setState((prev) => ({
           ...prev,
           isLoading: false,
-          adventure: newAdventure.trim() || previousAdventure,
+          adventure: newAdventure || previousAdventure,
           chatMessages: [
             ...prev.chatMessages,
             {
               id: crypto.randomUUID(),
               role: 'assistant',
-              content: confirmationMsg || '✓ Aventura atualizada.',
+              content: confirmation || '✓ Aventura atualizada.',
             },
           ],
         }));
@@ -261,7 +215,7 @@ export function useAdventureState(
               role: 'assistant',
               content: isAbort
                 ? '⚠ A alteração demorou demais. Tente um pedido mais curto.'
-                : '⚠ Erro ao processar alteração. Tente novamente.',
+                : `⚠ ${error instanceof Error ? error.message : 'Erro ao processar alteração.'}`,
             },
           ],
         }));
