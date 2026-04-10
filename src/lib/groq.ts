@@ -10,7 +10,7 @@ export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 // Fallback usa max_tokens reduzido para caber no limite de 6K TPM da camada gratuita
 export const MODEL_PRIMARY = 'llama-3.3-70b-versatile';
 export const MODEL_FALLBACK = 'llama-3.1-8b-instant';
-export const MAX_TOKENS_FALLBACK = 4096;
+export const MAX_TOKENS_FALLBACK = 3500;
 
 export function isRateLimit(error: unknown): boolean {
   if (error instanceof Error) {

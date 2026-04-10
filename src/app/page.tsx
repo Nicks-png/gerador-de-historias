@@ -54,7 +54,7 @@ export default function Home() {
       </header>
 
       {/* Body: sidebar sempre visível + conteúdo principal */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex overflow-hidden h-[calc(100vh-56px)]">
         <Sidebar
           conversations={conversations}
           isOpen={sidebarOpen}
