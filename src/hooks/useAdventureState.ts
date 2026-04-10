@@ -159,6 +159,7 @@ export function useAdventureState(
   const sendChatMessage = useCallback(
     async (msg: string) => {
       const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: msg };
+      const previousAdventure = state.adventure;
 
       setState((prev) => ({
         ...prev,
@@ -186,8 +187,7 @@ export function useAdventureState(
         let adventureStarted = false;
         let confirmationMsg = '';
 
-        setState((prev) => ({ ...prev, isLoading: false, adventure: '' }));
-
+        // Não limpar adventure nem alterar isLoading até encontrar o separador
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -199,6 +199,7 @@ export function useAdventureState(
               confirmationMsg = buffer.slice(0, sepIdx).trim();
               const afterSep = buffer.slice(sepIdx + SEPARATOR.length);
               adventureStarted = true;
+              // Só agora substituímos a aventura
               setState((prev) => ({ ...prev, adventure: afterSep }));
               buffer = '';
             }
@@ -212,8 +213,27 @@ export function useAdventureState(
           setState((prev) => ({ ...prev, adventure: prev.adventure + buffer }));
         }
 
+        // Separador nunca encontrado: restaura aventura anterior
+        if (!adventureStarted) {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            adventure: previousAdventure,
+            chatMessages: [
+              ...prev.chatMessages,
+              {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: '⚠ Não foi possível processar a alteração. Tente novamente.',
+              },
+            ],
+          }));
+          return;
+        }
+
         setState((prev) => ({
           ...prev,
+          isLoading: false,
           chatMessages: [
             ...prev.chatMessages,
             {
@@ -227,6 +247,7 @@ export function useAdventureState(
         setState((prev) => ({
           ...prev,
           isLoading: false,
+          adventure: previousAdventure,
           error: error instanceof Error ? error.message : 'Erro desconhecido',
         }));
       }
