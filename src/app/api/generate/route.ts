@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { groq, MODEL_PRIMARY, MODEL_FALLBACK } from '@/lib/groq';
+import { groq, MODEL_PRIMARY, MODEL_FALLBACK, MAX_TOKENS_FALLBACK, isRateLimit } from '@/lib/groq';
 import { ADVENTURE_SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts';
 import { Question } from '@/lib/types';
 
@@ -28,9 +28,12 @@ export async function POST(request: NextRequest) {
     try {
       stream = await groq.chat.completions.create({ ...params, model: MODEL_PRIMARY });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('429') || msg.includes('rate_limit')) {
-        stream = await groq.chat.completions.create({ ...params, model: MODEL_FALLBACK });
+      if (isRateLimit(err)) {
+        stream = await groq.chat.completions.create({
+          ...params,
+          model: MODEL_FALLBACK,
+          max_tokens: MAX_TOKENS_FALLBACK,
+        });
       } else throw err;
     }
 

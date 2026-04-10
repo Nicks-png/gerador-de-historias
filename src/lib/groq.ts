@@ -6,13 +6,19 @@ if (!process.env.GROQ_API_KEY) {
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Modelo principal (100K TPD, 6K TPM) → fallback (500K TPD, 15K TPM) quando limite atingido
+// Modelo principal → fallback quando rate limit atingido
+// Fallback usa max_tokens reduzido para caber no limite de 6K TPM da camada gratuita
 export const MODEL_PRIMARY = 'llama-3.3-70b-versatile';
-export const MODEL_FALLBACK = 'gemma2-9b-it';
+export const MODEL_FALLBACK = 'llama-3.1-8b-instant';
+export const MAX_TOKENS_FALLBACK = 4096;
 
-function isRateLimit(error: unknown): boolean {
+export function isRateLimit(error: unknown): boolean {
   if (error instanceof Error) {
-    return error.message.includes('429') || error.message.includes('rate_limit');
+    return (
+      error.message.includes('429') ||
+      error.message.includes('rate_limit') ||
+      error.message.includes('413')
+    );
   }
   return false;
 }
@@ -27,7 +33,11 @@ export async function createChatCompletion(params: NonStreamParams) {
   } catch (err) {
     if (isRateLimit(err)) {
       console.warn('Rate limit no modelo principal, usando fallback...');
-      return await groq.chat.completions.create({ ...params, model: MODEL_FALLBACK });
+      return await groq.chat.completions.create({
+        ...params,
+        model: MODEL_FALLBACK,
+        max_tokens: Math.min(params.max_tokens ?? MAX_TOKENS_FALLBACK, MAX_TOKENS_FALLBACK),
+      });
     }
     throw err;
   }
