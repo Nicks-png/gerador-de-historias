@@ -6,9 +6,9 @@ if (!process.env.GROQ_API_KEY) {
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Modelo principal (100K TPD) → fallback (500K TPD) quando limite atingido
+// Modelo principal (100K TPD, 6K TPM) → fallback (500K TPD, 30K TPM) quando limite atingido
 export const MODEL_PRIMARY = 'llama-3.3-70b-versatile';
-export const MODEL_FALLBACK = 'llama-3.1-8b-instant';
+export const MODEL_FALLBACK = 'llama3-8b-8192';
 
 function isRateLimit(error: unknown): boolean {
   if (error instanceof Error) {
