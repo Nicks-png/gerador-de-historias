@@ -3,7 +3,7 @@ import { groq, MODEL_PRIMARY, MODEL_FALLBACK, MAX_TOKENS_FALLBACK, isRateLimit }
 import { EDIT_SYSTEM_PROMPT, buildEditPrompt } from '@/lib/prompts';
 import { ChatMessage } from '@/lib/types';
 
-export const maxDuration = 120;
+export const maxDuration = 55;
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const params = {
-      max_tokens: 8192,
+      max_tokens: 5000,
       temperature: 0.7,
       stream: true as const,
       messages: [

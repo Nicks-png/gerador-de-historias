@@ -168,6 +168,9 @@ export function useAdventureState(
         chatMessages: [...prev.chatMessages, userMsg],
       }));
 
+      const abortController = new AbortController();
+      const abortTimer = setTimeout(() => abortController.abort(), 55000);
+
       try {
         const response = await fetch('/api/edit', {
           method: 'POST',
@@ -177,6 +180,7 @@ export function useAdventureState(
             editRequest: msg,
             chatHistory: state.chatMessages,
           }),
+          signal: abortController.signal,
         });
 
         if (!response.ok) throw new Error(await response.text());
@@ -244,12 +248,24 @@ export function useAdventureState(
           ],
         }));
       } catch (error) {
+        const isAbort = error instanceof Error && error.name === 'AbortError';
         setState((prev) => ({
           ...prev,
           isLoading: false,
           adventure: previousAdventure,
-          error: error instanceof Error ? error.message : 'Erro desconhecido',
+          chatMessages: [
+            ...prev.chatMessages,
+            {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: isAbort
+                ? '⚠ A alteração demorou demais. Tente um pedido mais curto.'
+                : '⚠ Erro ao processar alteração. Tente novamente.',
+            },
+          ],
         }));
+      } finally {
+        clearTimeout(abortTimer);
       }
     },
     [state.adventure, state.chatMessages]
