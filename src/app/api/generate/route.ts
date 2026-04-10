@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { groq, MODEL } from '@/lib/groq';
+import { groq, MODEL_PRIMARY, MODEL_FALLBACK } from '@/lib/groq';
 import { ADVENTURE_SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts';
 import { Question } from '@/lib/types';
 
@@ -14,16 +14,25 @@ export async function POST(request: NextRequest) {
       return new Response('Dados inválidos', { status: 400 });
     }
 
-    const stream = await groq.chat.completions.create({
-      model: MODEL,
+    const params = {
       max_tokens: 8192,
       temperature: 0.9,
-      stream: true,
+      stream: true as const,
       messages: [
-        { role: 'system', content: ADVENTURE_SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt(summary, questions) },
+        { role: 'system' as const, content: ADVENTURE_SYSTEM_PROMPT },
+        { role: 'user' as const, content: buildUserPrompt(summary, questions) },
       ],
-    });
+    };
+
+    let stream;
+    try {
+      stream = await groq.chat.completions.create({ ...params, model: MODEL_PRIMARY });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('429') || msg.includes('rate_limit')) {
+        stream = await groq.chat.completions.create({ ...params, model: MODEL_FALLBACK });
+      } else throw err;
+    }
 
     const encoder = new TextEncoder();
     const readable = new ReadableStream({

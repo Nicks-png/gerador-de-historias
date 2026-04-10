@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { groq, MODEL } from '@/lib/groq';
+import { groq, MODEL_PRIMARY, MODEL_FALLBACK } from '@/lib/groq';
 import { EDIT_SYSTEM_PROMPT, buildEditPrompt } from '@/lib/prompts';
 import { ChatMessage } from '@/lib/types';
 
@@ -18,16 +18,25 @@ export async function POST(request: NextRequest) {
       return new Response('Dados inválidos', { status: 400 });
     }
 
-    const stream = await groq.chat.completions.create({
-      model: MODEL,
+    const params = {
       max_tokens: 8192,
       temperature: 0.7,
-      stream: true,
+      stream: true as const,
       messages: [
-        { role: 'system', content: EDIT_SYSTEM_PROMPT },
-        { role: 'user', content: buildEditPrompt(adventure, editRequest.trim(), chatHistory) },
+        { role: 'system' as const, content: EDIT_SYSTEM_PROMPT },
+        { role: 'user' as const, content: buildEditPrompt(adventure, editRequest.trim(), chatHistory) },
       ],
-    });
+    };
+
+    let stream;
+    try {
+      stream = await groq.chat.completions.create({ ...params, model: MODEL_PRIMARY });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('429') || msg.includes('rate_limit')) {
+        stream = await groq.chat.completions.create({ ...params, model: MODEL_FALLBACK });
+      } else throw err;
+    }
 
     const encoder = new TextEncoder();
     const readable = new ReadableStream({

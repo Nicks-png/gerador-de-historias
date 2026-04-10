@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { groq, MODEL } from '@/lib/groq';
+import { createChatCompletion } from '@/lib/groq';
 import { QUESTIONS_SYSTEM_PROMPT } from '@/lib/prompts';
 import { Question } from '@/lib/types';
 
@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Resumo inválido' }, { status: 400 });
     }
 
-    const completion = await groq.chat.completions.create({
-      model: MODEL,
+    const completion = await createChatCompletion({
       max_tokens: 1024,
       messages: [
         { role: 'system', content: QUESTIONS_SYSTEM_PROMPT },
