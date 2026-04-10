@@ -11,16 +11,46 @@ export default function Home() {
     useAdventureState();
 
   return (
-    <main className="min-h-screen bg-stone-900 text-stone-100">
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        <header className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-amber-400 tracking-tight mb-2">
-            ⚔ Gerador de Histórias RPG
-          </h1>
-          <p className="text-stone-400 text-sm max-w-md mx-auto">
-            Crie aventuras completas para RPG de mesa com o poder da Inteligência Artificial
-          </p>
-        </header>
+    <div className="min-h-screen bg-stone-900">
+      {/* Background gradient */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(245,158,11,0.07),transparent)]" />
+      </div>
+
+      {/* Header */}
+      <header className="relative border-b border-stone-800">
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-stone-900 font-bold text-sm shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+              ⚔
+            </div>
+            <span className="font-bold text-stone-200 tracking-tight text-sm">RPG Stories</span>
+          </div>
+          {state.phase !== 1 && (
+            <button
+              onClick={resetAdventure}
+              className="text-xs text-stone-600 hover:text-stone-400 transition-colors"
+            >
+              Recomeçar
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Main */}
+      <main className="relative max-w-5xl mx-auto px-6 py-12">
+        {/* Hero — only on phase 1 */}
+        {state.phase === 1 && (
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold text-stone-100 tracking-tight mb-4">
+              Gere aventuras de{' '}
+              <span className="text-amber-400">RPG de mesa</span>
+            </h1>
+            <p className="text-stone-400 text-base max-w-lg mx-auto leading-relaxed">
+              Descreva sua ideia, responda algumas perguntas e receba uma aventura completa — pronta para jogar.
+            </p>
+          </div>
+        )}
 
         <ProgressBar currentPhase={state.phase} />
 
@@ -52,7 +82,7 @@ export default function Home() {
             onAdjust={retryFromPhase2}
           />
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

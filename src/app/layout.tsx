@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gerador de Histórias RPG",
+  title: "RPG Stories — Gerador de Aventuras",
   description: "Crie aventuras completas para RPG de mesa com Inteligência Artificial",
 };
 
@@ -24,10 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-stone-900 text-stone-100">{children}</body>
     </html>
   );
 }

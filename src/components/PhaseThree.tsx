@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -18,44 +19,62 @@ export default function PhaseThree({
   onNewAdventure,
   onAdjust,
 }: PhaseThreeProps) {
+  const [copied, setCopied] = useState(false);
+
+  const isStreaming = isLoading || (adventure.length > 0 && !adventure.includes('## Ganchos para o Futuro'));
+  const isDone = !isStreaming && adventure.length > 0;
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(adventure);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback silencioso
+      // silencioso
     }
   };
 
-  const isStreaming = isLoading || (adventure.length > 0 && !adventure.includes('## Ganchos para o Futuro'));
-
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-amber-400">
-          Sua Aventura
+    <div className="max-w-3xl mx-auto fade-in">
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-stone-100 tracking-tight">Sua Aventura</h2>
           {isStreaming && (
-            <span className="ml-2 text-sm font-normal text-stone-400 animate-pulse">
+            <span className="flex items-center gap-1.5 text-xs text-amber-400/70 font-medium bg-amber-500/10 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
               gerando...
             </span>
           )}
-        </h2>
-        {!isStreaming && adventure && (
-          <div className="flex gap-2">
+          {isDone && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400/70 font-medium bg-emerald-500/10 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              pronta
+            </span>
+          )}
+        </div>
+
+        {isDone && (
+          <div className="flex items-center gap-2">
             <button
               onClick={onAdjust}
-              className="text-xs text-stone-400 hover:text-stone-200 border border-stone-600 hover:border-stone-500 px-3 py-1.5 rounded-lg transition-colors"
+              className="text-xs text-stone-500 hover:text-stone-300 border border-stone-700/60 hover:border-stone-600 px-3 py-1.5 rounded-lg transition-all duration-150"
             >
               Ajustar respostas
             </button>
             <button
               onClick={handleCopy}
-              className="text-xs text-stone-400 hover:text-stone-200 border border-stone-600 hover:border-stone-500 px-3 py-1.5 rounded-lg transition-colors"
+              className={`text-xs border px-3 py-1.5 rounded-lg transition-all duration-150 ${
+                copied
+                  ? 'text-emerald-400 border-emerald-700/60 bg-emerald-950/30'
+                  : 'text-stone-500 hover:text-stone-300 border-stone-700/60 hover:border-stone-600'
+              }`}
             >
-              Copiar Markdown
+              {copied ? '✓ Copiado!' : 'Copiar Markdown'}
             </button>
             <button
               onClick={onNewAdventure}
-              className="text-xs bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold px-3 py-1.5 rounded-lg transition-colors"
+              className="text-xs bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold px-4 py-1.5 rounded-lg transition-colors"
             >
               Nova Aventura
             </button>
@@ -63,41 +82,63 @@ export default function PhaseThree({
         )}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="bg-red-900/40 border border-red-700 rounded-lg px-4 py-3 text-red-300 text-sm mb-4">
-          {error}
-          <button
-            onClick={onAdjust}
-            className="ml-2 underline hover:no-underline"
-          >
-            Tentar novamente
-          </button>
+        <div className="flex items-start gap-3 bg-red-950/50 border border-red-800/60 rounded-xl px-4 py-3 mb-4">
+          <span className="text-red-400 mt-0.5 shrink-0">✕</span>
+          <p className="text-red-300 text-sm">
+            {error}{' '}
+            <button onClick={onAdjust} className="underline hover:no-underline ml-1">
+              Tentar novamente
+            </button>
+          </p>
         </div>
       )}
 
-      <div className="bg-stone-800/40 border border-stone-700 rounded-xl p-6 min-h-32">
+      {/* Content */}
+      <div className="bg-stone-800/30 border border-stone-700/50 rounded-2xl overflow-hidden">
         {adventure ? (
-          <div className="prose prose-invert prose-amber max-w-none prose-sm prose-headings:text-amber-400 prose-strong:text-stone-200 prose-blockquote:text-stone-400 prose-blockquote:border-amber-600 prose-table:text-sm prose-th:text-amber-400 prose-a:text-amber-500">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {adventure}
-            </ReactMarkdown>
+          <div className="px-8 py-8 prose prose-invert prose-amber max-w-none
+            prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight
+            prose-h1:text-2xl prose-h1:mb-2 prose-h1:mt-0
+            prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-stone-700/50 prose-h2:pb-2
+            prose-h3:text-base prose-h3:text-amber-300 prose-h3:mt-5 prose-h3:mb-2
+            prose-p:text-stone-300 prose-p:leading-7 prose-p:text-sm
+            prose-strong:text-stone-200 prose-strong:font-semibold
+            prose-blockquote:text-stone-400 prose-blockquote:border-l-2 prose-blockquote:border-amber-600/50 prose-blockquote:pl-4 prose-blockquote:not-italic prose-blockquote:text-sm
+            prose-ul:text-stone-300 prose-ul:text-sm prose-li:leading-6
+            prose-ol:text-stone-300 prose-ol:text-sm
+            prose-table:text-sm prose-th:text-amber-400 prose-th:font-semibold prose-th:bg-stone-800/60 prose-th:py-2 prose-td:text-stone-300 prose-td:py-2 prose-td:border-stone-700/40
+            prose-code:text-amber-300 prose-code:bg-stone-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+            prose-a:text-amber-500 prose-a:no-underline hover:prose-a:underline
+            prose-hr:border-stone-700/50">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{adventure}</ReactMarkdown>
             {isStreaming && (
-              <span className="inline-block w-2 h-4 bg-amber-400 animate-pulse ml-0.5" />
+              <span className="inline-block w-2 h-[1.1em] bg-amber-400 cursor-blink align-middle ml-0.5 rounded-sm" />
             )}
           </div>
         ) : isLoading ? (
-          <div className="flex items-center justify-center h-32 text-stone-500">
-            <span className="animate-spin mr-2 text-amber-500">⚔</span>
-            Preparando sua aventura...
+          <div className="flex flex-col items-center justify-center h-48 gap-4">
+            <svg className="animate-spin w-8 h-8 text-amber-500" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeDasharray="60" strokeDashoffset="20" />
+            </svg>
+            <p className="text-stone-500 text-sm">Preparando sua aventura...</p>
           </div>
         ) : null}
       </div>
 
-      {!isStreaming && adventure && (
-        <div className="flex justify-center mt-6">
+      {/* Bottom CTA */}
+      {isDone && (
+        <div className="flex justify-center mt-8 gap-3">
+          <button
+            onClick={onAdjust}
+            className="text-sm text-stone-400 hover:text-stone-200 border border-stone-700 hover:border-stone-600 py-2.5 px-6 rounded-xl transition-all"
+          >
+            Ajustar detalhes
+          </button>
           <button
             onClick={onNewAdventure}
-            className="bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold py-2.5 px-8 rounded-lg transition-colors text-sm"
+            className="text-sm bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold py-2.5 px-8 rounded-xl transition-colors"
           >
             Criar Nova Aventura
           </button>
