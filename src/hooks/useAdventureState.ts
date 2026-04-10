@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { AdventureState, Question, SavedAdventure, ChatMessage } from '@/lib/types';
+import { AdventureState, Conversation, Question, ChatMessage } from '@/lib/types';
+import { extractTitle } from '@/hooks/useHistory';
 
 const SEPARATOR = '---ADVENTURE---';
+const STORAGE_KEY = 'rpg-conversations';
+const ACTIVE_ID_KEY = 'rpg-active-conversation';
 
 const initialState: AdventureState = {
-  phase: 1,
+  conversationId: null,
+  phase: 0,
   summary: '',
   questions: [],
   adventure: '',
@@ -16,17 +20,62 @@ const initialState: AdventureState = {
 };
 
 export function useAdventureState(
-  onSave: (data: { summary: string; adventure: string }) => void
+  onSave: (data: Omit<Conversation, 'createdAt' | 'updatedAt'> & { createdAt?: string }) => void
 ) {
   const [state, setState] = useState<AdventureState>(initialState);
 
-  // Auto-save quando streaming termina
+  // Restore active conversation on mount
   useEffect(() => {
-    if (state.phase === 3 && !state.isLoading && state.adventure) {
-      onSave({ summary: state.summary, adventure: state.adventure });
+    try {
+      const activeId = localStorage.getItem(ACTIVE_ID_KEY);
+      if (!activeId) return;
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const convs: Conversation[] = JSON.parse(raw);
+      const active = convs.find((c) => c.id === activeId);
+      if (active) {
+        setState({
+          conversationId: active.id,
+          phase: active.phase,
+          summary: active.summary,
+          questions: active.questions,
+          adventure: active.adventure,
+          chatMessages: active.chatMessages,
+          isLoading: false,
+          error: null,
+        });
+      }
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save when loading finishes (phase 2 questions ready OR phase 3 streaming/chat done)
+  useEffect(() => {
+    if (!state.isLoading && state.conversationId && state.phase >= 2) {
+      persistState(state);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isLoading]);
+
+  function persistState(s: AdventureState) {
+    if (!s.conversationId) return;
+    localStorage.setItem(ACTIVE_ID_KEY, s.conversationId);
+    onSave({
+      id: s.conversationId,
+      title: extractTitle(s.adventure, s.summary),
+      summary: s.summary,
+      phase: s.phase,
+      questions: s.questions,
+      adventure: s.adventure,
+      chatMessages: s.chatMessages,
+    });
+  }
+
+  const startNewConversation = useCallback(() => {
+    const id = crypto.randomUUID();
+    setState({ ...initialState, conversationId: id, phase: 1 });
+    localStorage.setItem(ACTIVE_ID_KEY, id);
+  }, []);
 
   const submitSummary = useCallback(async (summary: string) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null, summary }));
@@ -159,7 +208,6 @@ export function useAdventureState(
           }
         }
 
-        // Flush restante se aventura começou mas ainda havia buffer
         if (adventureStarted && buffer) {
           setState((prev) => ({ ...prev, adventure: prev.adventure + buffer }));
         }
@@ -186,20 +234,37 @@ export function useAdventureState(
     [state.adventure, state.chatMessages]
   );
 
-  const loadAdventure = useCallback((saved: SavedAdventure) => {
+  const loadConversation = useCallback((conv: Conversation) => {
+    localStorage.setItem(ACTIVE_ID_KEY, conv.id);
     setState({
-      ...initialState,
-      phase: 3,
-      summary: saved.summary,
-      adventure: saved.adventure,
+      conversationId: conv.id,
+      phase: conv.phase,
+      summary: conv.summary,
+      questions: conv.questions,
+      adventure: conv.adventure,
+      chatMessages: conv.chatMessages,
+      isLoading: false,
+      error: null,
     });
   }, []);
 
-  const resetAdventure = useCallback(() => setState(initialState), []);
+  const resetAdventure = useCallback(() => {
+    localStorage.removeItem(ACTIVE_ID_KEY);
+    setState(initialState);
+  }, []);
 
   const retryFromPhase2 = useCallback(() => {
     setState((prev) => ({ ...prev, phase: 2, adventure: '', error: null }));
   }, []);
 
-  return { state, submitSummary, submitAnswers, sendChatMessage, loadAdventure, resetAdventure, retryFromPhase2 };
+  return {
+    state,
+    startNewConversation,
+    submitSummary,
+    submitAnswers,
+    sendChatMessage,
+    loadConversation,
+    resetAdventure,
+    retryFromPhase2,
+  };
 }

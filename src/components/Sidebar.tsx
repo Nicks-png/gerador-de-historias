@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { SavedAdventure } from '@/lib/types';
+import { Conversation } from '@/lib/types';
 
 interface SidebarProps {
-  adventures: SavedAdventure[];
+  conversations: Conversation[];
   isOpen: boolean;
   onToggle: () => void;
-  onLoad: (saved: SavedAdventure) => void;
+  onLoad: (conv: Conversation) => void;
   onDelete: (id: string) => void;
   onNewAdventure: () => void;
-  currentAdventure: string;
+  currentConversationId: string | null;
 }
 
 function relativeDate(iso: string): string {
@@ -24,13 +24,13 @@ function relativeDate(iso: string): string {
 }
 
 export default function Sidebar({
-  adventures,
+  conversations,
   isOpen,
   onToggle,
   onLoad,
   onDelete,
   onNewAdventure,
-  currentAdventure,
+  currentConversationId,
 }: SidebarProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -78,10 +78,10 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Lista de aventuras */}
+      {/* Lista de conversas */}
       {isOpen && (
         <div className="flex-1 overflow-y-auto py-2">
-          {adventures.length === 0 ? (
+          {conversations.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <p className="text-stone-600 text-xs leading-relaxed">
                 Nenhuma aventura salva.<br />Gere uma para começar.
@@ -89,12 +89,13 @@ export default function Sidebar({
             </div>
           ) : (
             <ul className="space-y-0.5 px-2">
-              {adventures.map((a) => {
-                const isActive = currentAdventure.slice(0, 120) === a.adventure.slice(0, 120);
+              {conversations.map((conv) => {
+                const isActive = conv.id === currentConversationId;
+                const inProgress = conv.phase < 3;
                 return (
-                  <li key={a.id}>
+                  <li key={conv.id}>
                     <button
-                      onClick={() => onLoad(a)}
+                      onClick={() => onLoad(conv)}
                       className={`group w-full text-left px-3 py-2.5 rounded-lg transition-all duration-150 relative ${
                         isActive
                           ? 'bg-amber-500/10 border border-amber-500/20 text-stone-200'
@@ -105,21 +106,26 @@ export default function Sidebar({
                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-amber-500 rounded-full" />
                       )}
                       <p className="text-xs font-medium truncate pr-6 leading-relaxed">
-                        {a.title}
+                        {conv.title}
                       </p>
-                      <p className="text-[10px] text-stone-600 mt-0.5">
-                        {relativeDate(a.savedAt)}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {inProgress && (
+                          <span className="text-[9px] font-medium text-amber-500/70">● em progresso</span>
+                        )}
+                        <p className="text-[10px] text-stone-600">
+                          {relativeDate(conv.updatedAt)}
+                        </p>
+                      </div>
 
                       {/* Botão deletar */}
                       <button
-                        onClick={(e) => handleDelete(e, a.id)}
+                        onClick={(e) => handleDelete(e, conv.id)}
                         className={`absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded transition-all ${
-                          confirmDelete === a.id
+                          confirmDelete === conv.id
                             ? 'text-red-400 opacity-100'
                             : 'text-stone-600 opacity-0 group-hover:opacity-100 hover:text-red-400'
                         }`}
-                        title={confirmDelete === a.id ? 'Confirmar?' : 'Deletar'}
+                        title={confirmDelete === conv.id ? 'Confirmar?' : 'Deletar'}
                       >
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                           <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

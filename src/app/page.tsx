@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ProgressBar from '@/components/ProgressBar';
+import PhaseZero from '@/components/PhaseZero';
 import PhaseOne from '@/components/PhaseOne';
 import PhaseTwo from '@/components/PhaseTwo';
 import PhaseThree from '@/components/PhaseThree';
@@ -12,13 +13,14 @@ import { useHistory } from '@/hooks/useHistory';
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { adventures, save, remove } = useHistory();
+  const { conversations, save, remove } = useHistory();
   const {
     state,
+    startNewConversation,
     submitSummary,
     submitAnswers,
     sendChatMessage,
-    loadAdventure,
+    loadConversation,
     resetAdventure,
     retryFromPhase2,
   } = useAdventureState(save);
@@ -31,18 +33,21 @@ export default function Home() {
       {/* Header */}
       <header className="shrink-0 border-b border-stone-800 bg-stone-950 z-10">
         <div className="h-14 px-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <button
+            onClick={resetAdventure}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center text-stone-900 font-bold text-xs shadow-[0_0_10px_rgba(245,158,11,0.3)]">
               ⚔
             </div>
             <span className="font-bold text-stone-200 tracking-tight text-sm">RPG Stories</span>
-          </div>
-          {state.phase !== 1 && (
+          </button>
+          {state.phase > 0 && (
             <button
               onClick={resetAdventure}
               className="text-xs text-stone-600 hover:text-stone-400 transition-colors"
             >
-              Recomeçar
+              Início
             </button>
           )}
         </div>
@@ -53,13 +58,13 @@ export default function Home() {
         /* Layout fase 3: sidebar + content + chatbar */
         <div className="flex flex-1 overflow-hidden h-[calc(100vh-56px)]">
           <Sidebar
-            adventures={adventures}
+            conversations={conversations}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen((o) => !o)}
-            onLoad={loadAdventure}
+            onLoad={loadConversation}
             onDelete={remove}
-            onNewAdventure={resetAdventure}
-            currentAdventure={state.adventure}
+            onNewAdventure={startNewConversation}
+            currentConversationId={state.conversationId}
           />
 
           {/* Main: adventure scroll + chatbar fixo na base */}
@@ -70,7 +75,7 @@ export default function Home() {
                 adventure={state.adventure}
                 isLoading={state.isLoading}
                 error={state.error}
-                onNewAdventure={resetAdventure}
+                onNewAdventure={startNewConversation}
                 onAdjust={retryFromPhase2}
               />
             </div>
@@ -83,44 +88,54 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        /* Layout fases 1 e 2: centralizado */
-        <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-12">
+        /* Layout fases 0, 1 e 2: centralizado */
+        <main className="flex-1 flex flex-col items-center w-full overflow-y-auto">
+          {state.phase === 0 && (
+            <PhaseZero
+              conversations={conversations}
+              onNew={startNewConversation}
+              onLoad={loadConversation}
+              onDelete={remove}
+            />
+          )}
+
           {state.phase === 1 && (
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-bold text-stone-100 tracking-tight mb-4">
-                Gere aventuras de{' '}
-                <span className="text-amber-400">RPG de mesa</span>
-              </h1>
-              <p className="text-stone-400 text-base max-w-lg mx-auto leading-relaxed">
-                Descreva sua ideia, responda algumas perguntas e receba uma aventura completa — pronta para jogar.
-              </p>
+            <div className="w-full max-w-5xl px-6 py-12">
+              <div className="text-center mb-12">
+                <h1 className="text-5xl font-bold text-stone-100 tracking-tight mb-4">
+                  Gere aventuras de{' '}
+                  <span className="text-amber-400">RPG de mesa</span>
+                </h1>
+                <p className="text-stone-400 text-base max-w-lg mx-auto leading-relaxed">
+                  Descreva sua ideia, responda algumas perguntas e receba uma aventura completa — pronta para jogar.
+                </p>
+              </div>
+              <ProgressBar currentPhase={state.phase} />
+              <PhaseOne
+                onSubmit={submitSummary}
+                isLoading={state.isLoading}
+                error={state.error}
+              />
             </div>
           )}
 
-          <ProgressBar currentPhase={state.phase} />
-
-          {state.phase === 1 && (
-            <PhaseOne
-              onSubmit={submitSummary}
-              isLoading={state.isLoading}
-              error={state.error}
-            />
-          )}
-
           {state.phase === 2 && (
-            <PhaseTwo
-              questions={state.questions}
-              summary={state.summary}
-              onSubmit={submitAnswers}
-              onBack={resetAdventure}
-              isLoading={state.isLoading}
-              error={state.error}
-            />
+            <div className="w-full max-w-5xl px-6 py-12">
+              <ProgressBar currentPhase={state.phase} />
+              <PhaseTwo
+                questions={state.questions}
+                summary={state.summary}
+                onSubmit={submitAnswers}
+                onBack={resetAdventure}
+                isLoading={state.isLoading}
+                error={state.error}
+              />
+            </div>
           )}
         </main>
       )}
 
-      {/* Background gradient (fases 1 e 2) */}
+      {/* Background gradient (fases 0, 1 e 2) */}
       {!isPhase3 && (
         <div className="fixed inset-0 pointer-events-none -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(245,158,11,0.07),transparent)]" />

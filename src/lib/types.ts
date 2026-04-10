@@ -1,4 +1,4 @@
-export type Phase = 1 | 2 | 3;
+export type Phase = 0 | 1 | 2 | 3;
 
 export interface Question {
   id: string;
@@ -12,15 +12,20 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface SavedAdventure {
+export interface Conversation {
   id: string;
   title: string;
   summary: string;
+  phase: Phase;
+  questions: Question[];
   adventure: string;
-  savedAt: string; // ISO 8601
+  chatMessages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdventureState {
+  conversationId: string | null;
   phase: Phase;
   summary: string;
   questions: Question[];
