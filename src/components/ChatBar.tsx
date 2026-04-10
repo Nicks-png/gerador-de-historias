@@ -49,8 +49,6 @@ export default function ChatBar({ messages, isLoading, isAdventureReady, onSend 
     inputRef.current?.focus();
   };
 
-  if (!isAdventureReady) return null;
-
   return (
     <div className="border-t border-stone-800 bg-stone-950 shrink-0">
       {/* Mensagens */}
@@ -124,9 +122,9 @@ export default function ChatBar({ messages, isLoading, isAdventureReady, onSend 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Peça uma alteração na aventura... (Enter para enviar)"
+          placeholder={isAdventureReady ? 'Peça uma alteração na aventura... (Enter para enviar)' : 'Aguardando a aventura ser gerada...'}
           rows={1}
-          disabled={isLoading}
+          disabled={isLoading || !isAdventureReady}
           className="flex-1 bg-stone-800/60 border border-stone-700/50 focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/10 rounded-xl px-3 py-2 text-stone-100 placeholder-stone-600 text-sm resize-none outline-none transition-all disabled:opacity-50 max-h-28"
           style={{ height: 'auto' }}
           onInput={(e) => {
@@ -138,7 +136,7 @@ export default function ChatBar({ messages, isLoading, isAdventureReady, onSend 
 
         <button
           onClick={handleSend}
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !isAdventureReady || !input.trim()}
           className="shrink-0 w-8 h-8 mb-0.5 flex items-center justify-center bg-amber-500 hover:bg-amber-400 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 rounded-lg transition-colors"
         >
           {isLoading ? (
