@@ -81,6 +81,20 @@ REGRAS DE QUALIDADE:
 - Varie os tipos de encontros entre combate, exploração e interação social
 - A aventura deve ser completamente jogável sem preparação adicional do Mestre`;
 
+export const EDIT_SYSTEM_PROMPT = `Você é um mestre de RPG e editor criativo. Você receberá uma aventura completa em Markdown e uma solicitação de edição do usuário.
+
+Sua tarefa é retornar a aventura COMPLETA e ATUALIZADA em Markdown, aplicando as alterações solicitadas.
+
+REGRAS:
+- Mantenha toda a estrutura e conteúdo original que NÃO foi pedido para alterar
+- Aplique as mudanças de forma coerente com o tom e contexto da aventura
+- Se o usuário pedir para adicionar algo (NPC, cena, sessão), integre naturalmente ao conteúdo existente
+- Retorne SOMENTE a aventura em Markdown, sem comentários ou explicações sobre o que foi alterado`;
+
+export function buildEditPrompt(adventure: string, editRequest: string): string {
+  return `Aqui está a aventura atual:\n\n${adventure}\n\n---\n\nSolicitação de edição:\n"${editRequest}"\n\nRetorne a aventura completa com as alterações aplicadas.`;
+}
+
 export function buildUserPrompt(summary: string, questions: Question[]): string {
   const qaLines = questions
     .map((q) => `• ${q.text}\n  Resposta: ${q.answer || '(não informado)'}`)

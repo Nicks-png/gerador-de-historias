@@ -10,6 +10,7 @@ interface PhaseThreeProps {
   error: string | null;
   onNewAdventure: () => void;
   onAdjust: () => void;
+  onEdit: (editRequest: string) => void;
 }
 
 export default function PhaseThree({
@@ -18,8 +19,11 @@ export default function PhaseThree({
   error,
   onNewAdventure,
   onAdjust,
+  onEdit,
 }: PhaseThreeProps) {
   const [copied, setCopied] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editText, setEditText] = useState('');
 
   const isStreaming = isLoading || (adventure.length > 0 && !adventure.includes('## Ganchos para o Futuro'));
   const isDone = !isStreaming && adventure.length > 0;
@@ -29,10 +33,23 @@ export default function PhaseThree({
       await navigator.clipboard.writeText(adventure);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // silencioso
-    }
+    } catch { /* silencioso */ }
   };
+
+  const handleEdit = () => {
+    if (!editText.trim()) return;
+    onEdit(editText.trim());
+    setEditText('');
+    setEditOpen(false);
+  };
+
+  const EDIT_SUGGESTIONS = [
+    'Adicione mais um NPC importante com segredos próprios',
+    'Inclua uma cena de combate extra na sessão 2',
+    'Torne o tom mais sombrio e dramático',
+    'Adicione uma reviravolta surpreendente no final',
+    'Inclua mais detalhes sobre os locais principais',
+  ];
 
   return (
     <div className="max-w-3xl mx-auto fade-in">
@@ -43,7 +60,7 @@ export default function PhaseThree({
           {isStreaming && (
             <span className="flex items-center gap-1.5 text-xs text-amber-400/70 font-medium bg-amber-500/10 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              gerando...
+              {isLoading && adventure.length === 0 ? 'preparando...' : 'gerando...'}
             </span>
           )}
           {isDone && (
@@ -57,10 +74,14 @@ export default function PhaseThree({
         {isDone && (
           <div className="flex items-center gap-2">
             <button
-              onClick={onAdjust}
-              className="text-xs text-stone-500 hover:text-stone-300 border border-stone-700/60 hover:border-stone-600 px-3 py-1.5 rounded-lg transition-all duration-150"
+              onClick={() => setEditOpen((o) => !o)}
+              className={`text-xs border px-3 py-1.5 rounded-lg transition-all duration-150 ${
+                editOpen
+                  ? 'text-amber-400 border-amber-600/50 bg-amber-500/10'
+                  : 'text-stone-500 hover:text-stone-300 border-stone-700/60 hover:border-stone-600'
+              }`}
             >
-              Ajustar respostas
+              ✏ Editar
             </button>
             <button
               onClick={handleCopy}
@@ -70,17 +91,64 @@ export default function PhaseThree({
                   : 'text-stone-500 hover:text-stone-300 border-stone-700/60 hover:border-stone-600'
               }`}
             >
-              {copied ? '✓ Copiado!' : 'Copiar Markdown'}
+              {copied ? '✓ Copiado!' : 'Copiar'}
             </button>
             <button
               onClick={onNewAdventure}
               className="text-xs bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold px-4 py-1.5 rounded-lg transition-colors"
             >
-              Nova Aventura
+              Nova
             </button>
           </div>
         )}
       </div>
+
+      {/* Edit panel */}
+      {editOpen && isDone && (
+        <div className="mb-5 bg-stone-800/50 border border-amber-600/20 rounded-2xl p-5 fade-in">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-amber-400 text-sm font-semibold">Editar aventura</span>
+            <span className="text-stone-600 text-xs">— descreva o que quer adicionar ou alterar</span>
+          </div>
+
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            placeholder="Ex: Adicione um NPC chamado Lyra, uma elfa traidora que trabalha para o vilão..."
+            rows={3}
+            className="w-full bg-stone-900/60 border border-stone-700/50 focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/10 rounded-xl px-4 py-3 text-stone-100 placeholder-stone-600 text-sm resize-none outline-none transition-all duration-200 mb-3"
+          />
+
+          {/* Suggestions */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {EDIT_SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setEditText(s)}
+                className="text-xs text-stone-500 hover:text-amber-400 border border-stone-700/50 hover:border-amber-600/30 px-2.5 py-1 rounded-lg transition-all"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => { setEditOpen(false); setEditText(''); }}
+              className="text-xs text-stone-600 hover:text-stone-400 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleEdit}
+              disabled={!editText.trim()}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold py-2 px-5 rounded-lg transition-colors text-sm"
+            >
+              Aplicar alterações ✨
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -131,10 +199,14 @@ export default function PhaseThree({
       {isDone && (
         <div className="flex justify-center mt-8 gap-3">
           <button
-            onClick={onAdjust}
-            className="text-sm text-stone-400 hover:text-stone-200 border border-stone-700 hover:border-stone-600 py-2.5 px-6 rounded-xl transition-all"
+            onClick={() => setEditOpen((o) => !o)}
+            className={`text-sm border py-2.5 px-6 rounded-xl transition-all ${
+              editOpen
+                ? 'text-amber-400 border-amber-600/40 bg-amber-500/5'
+                : 'text-stone-400 hover:text-stone-200 border-stone-700 hover:border-stone-600'
+            }`}
           >
-            Ajustar detalhes
+            ✏ Editar aventura
           </button>
           <button
             onClick={onNewAdventure}

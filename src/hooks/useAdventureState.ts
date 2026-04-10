@@ -117,11 +117,50 @@ export function useAdventureState() {
     }));
   }, []);
 
+  const submitEdit = useCallback(async (editRequest: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const response = await fetch('/api/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adventure: state.adventure,
+          editRequest,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Erro ao editar aventura');
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+
+      setState((prev) => ({ ...prev, isLoading: false, adventure: '' }));
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setState((prev) => ({ ...prev, adventure: prev.adventure + chunk }));
+      }
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+      }));
+    }
+  }, [state.adventure]);
+
   return {
     state,
     submitSummary,
     submitAnswers,
     resetAdventure,
     retryFromPhase2,
+    submitEdit,
   };
 }

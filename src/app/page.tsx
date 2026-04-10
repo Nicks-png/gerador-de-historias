@@ -7,7 +7,7 @@ import PhaseThree from '@/components/PhaseThree';
 import { useAdventureState } from '@/hooks/useAdventureState';
 
 export default function Home() {
-  const { state, submitSummary, submitAnswers, resetAdventure, retryFromPhase2 } =
+  const { state, submitSummary, submitAnswers, resetAdventure, retryFromPhase2, submitEdit } =
     useAdventureState();
 
   return (
@@ -80,6 +80,7 @@ export default function Home() {
             error={state.error}
             onNewAdventure={resetAdventure}
             onAdjust={retryFromPhase2}
+            onEdit={submitEdit}
           />
         )}
       </main>
